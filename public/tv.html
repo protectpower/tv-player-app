@@ -109,7 +109,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
       <div class="notice" id="accountInfo">Conta conectada</div>
       <div class="small muted">Protect Power TV</div>
     </aside>
-    <section class="content">
+    <section class="content" id="content">
       <div id="playerBox" class="playerbox hidden">
         <div class="playerhead"><div><b id="playingTitle">Reproduzindo</b><div class="sub" id="playingSub"></div></div><button id="closePlayer" class="logout">Fechar</button></div>
         <video id="video" controls playsinline></video>
@@ -460,14 +460,43 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
  function move(dir){
    const cur=document.activeElement;const list=focusables();
    if(!cur||cur===document.body||!list.includes(cur)){(list.find(e=>e.classList.contains('item'))||list[0])?.focus();return}
-   const a=cur.getBoundingClientRect(),ax=a.left+a.width/2,ay=a.top+a.height/2;let best=null,bs=1e12;
-   for(const el of list){if(el===cur)continue;const b=el.getBoundingClientRect(),bx=b.left+b.width/2,by=b.top+b.height/2,dx=bx-ax,dy=by-ay;
-     let main,cross;if(dir==='right'){if(b.left<a.right-4&&dx<=4)continue;main=dx;cross=Math.abs(dy)}
-     else if(dir==='left'){if(b.right>a.left+4&&dx>=-4)continue;main=-dx;cross=Math.abs(dy)}
-     else if(dir==='down'){if(b.top<a.bottom-4&&dy<=4)continue;main=dy;cross=Math.abs(dx)}
-     else{if(b.bottom>a.top+4&&dy>=-4)continue;main=-dy;cross=Math.abs(dx)}
-     if(main<=0)continue;const sc=main+cross*3;if(sc<bs){bs=sc;best=el}}
-   if(best){best.focus({preventScroll:true});best.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'})}
+   const a=cur.getBoundingClientRect(),ax=a.left+a.width/2,ay=a.top+a.height/2;
+   const curIsItem=cur.classList.contains('item');
+   const cBox=$('content')||$('results').parentElement;
+   const cRect=cBox?cBox.getBoundingClientRect():null;
+
+   const pickBest=(candidates)=>{
+     let best=null,bs=1e12;
+     for(const el of candidates){
+       if(el===cur)continue;
+       const b=el.getBoundingClientRect(),bx=b.left+b.width/2,by=b.top+b.height/2,dx=bx-ax,dy=by-ay;
+       let main,cross;
+       if(dir==='right'){if(b.left<a.right-4&&dx<=4)continue;main=dx;cross=Math.abs(dy)}
+       else if(dir==='left'){if(b.right>a.left+4&&dx>=-4)continue;main=-dx;cross=Math.abs(dy)}
+       else if(dir==='down'){if(b.top<a.bottom-4&&dy<=4)continue;main=dy;cross=Math.abs(dx)}
+       else{if(b.bottom>a.top+4&&dy>=-4)continue;main=-dy;cross=Math.abs(dx)}
+       if(main<=0)continue;
+       let offPenalty=0;
+       if(cRect&&el.closest('.content')){
+         if(b.top<cRect.top)offPenalty+=(cRect.top-b.top)*2;
+         if(b.bottom>cRect.bottom)offPenalty+=(b.bottom-cRect.bottom)*2;
+       }
+       const sc=main+(cross*6)+offPenalty;
+       if(sc<bs){bs=sc;best=el}
+     }
+     return best;
+   };
+
+   let best=null;
+   if(curIsItem&&(dir==='up'||dir==='down')){
+     best=pickBest(list.filter(e=>e.classList.contains('item')));
+   }
+   if(!best)best=pickBest(list);
+
+   if(best){
+     best.focus({preventScroll:true});
+     best.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});
+   }
  }
  // Chamado pelo botão Voltar (no app Android). Retorna true se tratou.
  window.tvBack=function(){
