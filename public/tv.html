@@ -28,7 +28,7 @@ button:focus-visible,.item:focus-visible,.chip:focus-visible,input:focus-visible
 .nav button{min-height:54px}
 @media(max-width:800px){.poster{height:175px}}
 #playerBox.tvfs{position:fixed!important;inset:0;z-index:9999;margin:0;border:0;border-radius:0;background:#000;padding:0}
-#playerBox.tvfs>*:not(video):not(#tvOsd){display:none!important}
+#playerBox.tvfs>*:not(video):not(#tvOsd):not(#tvBar){display:none!important}
 #playerBox.tvfs video{width:100vw!important;height:100vh!important;max-height:none!important;border-radius:0;object-fit:contain;background:#000}
 body.tvlock{overflow:hidden}
 #tvOsd{display:none}#playerBox.tvfs #tvOsd{display:block;position:fixed;left:50%;bottom:6vh;transform:translateX(-50%);background:#000b;color:#fff;padding:12px 22px;border-radius:12px;font-size:20px;opacity:0;transition:opacity .3s;pointer-events:none}
@@ -46,7 +46,8 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
 .status b{color:var(--accent)}
 #tvBar{display:none}
 #playerBox.tvfs #tvBar{display:block;position:fixed;left:0;right:0;bottom:0;padding:40px 5vw 4vh;background:linear-gradient(transparent,#000d 45%);opacity:0;transition:opacity .3s;pointer-events:none}
-#playerBox.tvfs #tvBar.on{opacity:1}
+#playerBox.tvfs #tvBar.on{opacity:1;pointer-events:auto}
+#playerBox.tvfs #tvBar{z-index:10000}.tb-track{cursor:pointer}
 .tb-title{font-size:26px;font-weight:800;margin-bottom:14px;color:#fff}
 .tb-row{display:flex;align-items:center;gap:18px;font-size:20px;color:#fff}
 .tb-state{width:34px;color:var(--accent);font-size:24px}.tb-cur,.tb-dur{min-width:80px;font-variant-numeric:tabular-nums}
@@ -82,6 +83,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
         <button data-view="series">📚 Séries</button>
         <button data-view="continue">⏯ Continuar</button>
         <button data-view="favs">⭐ Favoritos</button>
+        <button data-view="recent">🕘 Vistos recentemente</button>
       </div>
       <div class="notice" id="accountInfo">Conta conectada</div>
       <div class="small muted">Protect Power TV</div>
@@ -148,12 +150,14 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
  function toggleFav(it,t){let f=LS('pp_favs',[]);const k=favKey(it,t);if(f.some(x=>x.key===k))f=f.filter(x=>x.key!==k);else f.unshift({key:k,type:t,item:it});SS('pp_favs',f.slice(0,300))}
  function addFavBtn(){const sel=state.sel;if(!sel)return;const body=$('detailPane').querySelector('.detailbody');if(!body)return;const b=document.createElement('button');b.className='favbtn';const upd=()=>{const on=isFav(sel.item,sel.type);b.textContent=on?'★ Nos favoritos':'☆ Adicionar aos favoritos';b.classList.toggle('on',on)};upd();b.onclick=()=>{toggleFav(sel.item,sel.type);upd()};const row=document.createElement('div');row.className='detailactions';row.appendChild(b);const w=$('watchMovieBtn');if(w)row.prepend(w);body.appendChild(row)}
  let track=null,lastSave=0;
+ function addRecent(url,title){const sel=state.sel||{};const type=sel.type||(/\/live\//.test(url)?'live':'movies');const key=type==='live'?favKey(sel.item||{name:title},'live'):url;let l=LS('pp_recent',[]).filter(x=>x.key!==key);l.unshift({key,url,title,type,item:sel.item||{name:title},at:Date.now()});SS('pp_recent',l.slice(0,10))}
  function fmt(t){t=Math.max(0,Math.floor(t||0));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s2=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s2).padStart(2,'0')}
  function trackStart(url,title){track=null;if(/\/live\//.test(url))return;const sel=state.sel||{};track={url,title,type:sel.type||'movies',item:sel.item||{name:title}};const prev=LS('pp_continue',[]).find(x=>x.url===url);if(prev&&prev.pos>20&&(!prev.dur||prev.pos<prev.dur-60)){const v=$('video');const seek=()=>{v.removeEventListener('loadedmetadata',seek);try{v.currentTime=prev.pos}catch{}};v.addEventListener('loadedmetadata',seek)}}
  function saveProgress(force){const v=$('video');if(!track||!isFinite(v.duration)||v.currentTime<5)return;const now=Date.now();if(!force&&now-lastSave<5000)return;lastSave=now;let list=LS('pp_continue',[]).filter(x=>x.url!==track.url);if(v.currentTime<v.duration-60)list.unshift({...track,pos:Math.floor(v.currentTime),dur:Math.floor(v.duration),at:now});SS('pp_continue',list.slice(0,40))}
  $('video').addEventListener('timeupdate',()=>saveProgress(false));$('video').addEventListener('pause',()=>saveProgress(true));
  function loadLocal(view){state.view=view;state.category=null;$('search').value='';$('categories').innerHTML='';$('moreWrap').classList.add('hidden');
    if(view==='favs'){$('viewTitle').textContent='Favoritos';state.items=LS('pp_favs',[]).map(f=>({...f.item,_type:f.type}));$('viewSub').textContent=state.items.length?state.items.length+' favoritos':'Abra um conteúdo e escolha “Adicionar aos favoritos”.'}
+   else if(view==='recent'){$('viewTitle').textContent='Vistos recentemente';state.items=LS('pp_recent',[]).map(c=>({...(c.item||{}),name:c.title,_resume:true,url:c.url,title:c.title,type:c.type,item:c.item}));$('viewSub').textContent=state.items.length?'Os últimos '+state.items.length+' que você assistiu':'Tudo o que você assistir aparece aqui.'}
    else{$('viewTitle').textContent='Continuar assistindo';state.items=LS('pp_continue',[]).map(c=>({...(c.item||{}),name:c.title,_resume:true,url:c.url,title:c.title,type:c.type,item:c.item,_pct:c.dur?Math.round(c.pos/c.dur*100):0,_left:c.dur?fmt(c.dur-c.pos)+' restantes':''}));$('viewSub').textContent=state.items.length?'Retome de onde parou':'Os filmes e episódios que você começar aparecem aqui.'}
    if(!state.items.length){$('results').innerHTML='<div class="empty">Nada por aqui ainda.</div>';return}
    renderItems();
@@ -182,7 +186,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
  $('search').addEventListener('input',()=>{clearTimeout(state.searchTimer);state.searchTimer=setTimeout(()=>searchAll($('search').value.trim()),350)});
  $('moreBtn').onclick=()=>loadItems(true);
  $('closePlayer').onclick=stopVideo;
- async function loadView(view){hideDetails();if(view==='favs'||view==='continue'){return loadLocal(view)}state.view=view;state.category=null;state.page=0;state.items=[];$('search').value='';$('viewTitle').textContent={live:'Canais ao vivo',movies:'Filmes',series:'Séries'}[view];$('viewSub').textContent='Escolha uma categoria ou pesquise.';$('results').innerHTML='<div class="empty">Carregando…</div>';try{await loadCategories();await loadItems(false)}catch(e){showNotice(e.message,'error')}}
+ async function loadView(view){hideDetails();if(view==='favs'||view==='continue'||view==='recent'){return loadLocal(view)}state.view=view;state.category=null;state.page=0;state.items=[];$('search').value='';$('viewTitle').textContent={live:'Canais ao vivo',movies:'Filmes',series:'Séries'}[view];$('viewSub').textContent='Escolha uma categoria ou pesquise.';$('results').innerHTML='<div class="empty">Carregando…</div>';try{await loadCategories();await loadItems(false)}catch(e){showNotice(e.message,'error')}}
  async function loadCategories(){
    const path={live:'/api/live/categories',movies:'/api/movies/categories',series:'/api/series/categories'}[state.view];
    const d=await api(path);state.categories=d.data||[];
@@ -301,7 +305,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
  }
  function startPlayback(url,title){
    stopVideo(false);$('playerBox').classList.remove('hidden');$('playingTitle').textContent=title;$('playingSub').textContent='Reprodução via servidor da conta';msg($('playerMsg'),'Carregando reprodução…');
-   const video=$('video');trackStart(url,title);
+   const video=$('video');trackStart(url,title);addRecent(url,title);
    // A API entrega episódios/filmes como MP4; somente streams .m3u8 devem passar pelo HLS.js.
    const isHls=/\.m3u8(?:$|[?])/i.test(url);
    video.onerror=()=>{const e=video.error;msg($('playerMsg'),'Erro no vídeo ('+(e?.code||'desconhecido')+'). Confira URL, autorização e disponibilidade.','error')};
@@ -322,9 +326,12 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
  const osd=document.createElement('div');osd.id='tvOsd';box.appendChild(osd);
  function showOsd(t){osd.textContent=t;osd.classList.add('on');clearTimeout(osdT);osdT=setTimeout(()=>osd.classList.remove('on'),1800)}
 
- const tvBar=document.createElement('div');tvBar.id='tvBar';tvBar.innerHTML='<div class="tb-title"></div><div class="tb-row"><span class="tb-state">▶</span><span class="tb-cur">0:00</span><div class="tb-track"><i class="tb-buf"></i><i class="tb-fill"></i><b class="tb-knob"></b></div><span class="tb-dur">0:00</span></div><div class="tb-hint">OK pausar · ◀ ▶ 15s (segure para 1 min) · Voltar sair</div>';box.appendChild(tvBar);
+ const tvBar=document.createElement('div');tvBar.id='tvBar';tvBar.innerHTML='<div class="tb-title"></div><div class="tb-row"><span class="tb-state">▶</span><span class="tb-cur">0:00</span><div class="tb-track"><i class="tb-buf"></i><i class="tb-fill"></i><b class="tb-knob"></b></div><span class="tb-dur">0:00</span></div><div class="tb-hint"></div>';box.appendChild(tvBar);
+ tvBar.querySelector('.tb-track').addEventListener('click',e=>{if(!isFinite(vid.duration))return;const r=e.currentTarget.getBoundingClientRect();vid.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*vid.duration;showBar()});
+ tvBar.querySelector('.tb-state').addEventListener('click',()=>{vid.paused?vid.play():vid.pause();showBar()});
+ vid.addEventListener('click',()=>{if(isFs()){if(tvBar.classList.contains('on'))tvBar.classList.remove('on');else showBar()}});
  let barT=null;
- function updBar(){const live=!isFinite(vid.duration);tvBar.querySelector('.tb-title').textContent=$('playingTitle').textContent;tvBar.querySelector('.tb-state').textContent=vid.paused?'❚❚':'▶';tvBar.classList.toggle('live',live);
+ function updBar(){const live=!isFinite(vid.duration);tvBar.querySelector('.tb-title').textContent=$('playingTitle').textContent;tvBar.querySelector('.tb-state').textContent=vid.paused?'❚❚':'▶';tvBar.classList.toggle('live',live);const sl=state.sel&&state.sel.type==='live';tvBar.querySelector('.tb-hint').textContent=live?('OK pausar · ▲ '+(sl&&isFav(state.sel.item,'live')?'tirar dos favoritos':'adicionar aos favoritos')+' · Voltar sair'):'OK pausar · ◀ ▶ 15s (segure para 1 min) · Voltar sair';
    tvBar.querySelector('.tb-cur').textContent=live?'● AO VIVO':fmt(vid.currentTime);tvBar.querySelector('.tb-dur').textContent=live?'':fmt(vid.duration);
    const pct=live?100:(vid.currentTime/vid.duration*100||0);tvBar.querySelector('.tb-fill').style.width=pct+'%';tvBar.querySelector('.tb-knob').style.left=pct+'%';
    try{const b=vid.buffered;if(b.length&&!live)tvBar.querySelector('.tb-buf').style.width=(b.end(b.length-1)/vid.duration*100)+'%'}catch{}}
@@ -361,6 +368,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
      if(k==='Enter'||k===' '||k==='MediaPlayPause'||k==='MediaPlay'||k==='MediaPause'){e.preventDefault();if(vid.paused)vid.play();else vid.pause();showBar()}
      else if(k==='ArrowRight'||k==='ArrowLeft'||k==='MediaFastForward'||k==='MediaRewind'){e.preventDefault();if(isFinite(vid.duration)){const fw=(k==='ArrowRight'||k==='MediaFastForward');const st=e.repeat?60:15;vid.currentTime=Math.max(0,Math.min(vid.duration-1,vid.currentTime+(fw?st:-st)))}showBar()}
      else if(k==='Escape'||k==='Backspace'||k==='GoBack'||k==='BrowserBack'){e.preventDefault();window.tvBack()}
+     else if(k==='ArrowUp'&&state.sel&&state.sel.type==='live'){e.preventDefault();toggleFav(state.sel.item,'live');showOsd(isFav(state.sel.item,'live')?'★ Canal adicionado aos favoritos':'☆ Canal removido dos favoritos');showBar()}
      else if(k==='ArrowUp'||k==='ArrowDown'){e.preventDefault();showBar()}
      return;
    }
