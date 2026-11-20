@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- `public/tv.html` is the cPlayer TV app; `android-tv/` wraps it in a WebView APK loaded from local assets (file:// avoids the API CORS block).
