@@ -184,9 +184,9 @@ button:focus,.chip:focus,input:focus{outline:3px solid #b8ff2e;outline-offset:3p
    finally{$('loginBtn').disabled=false}
  });
  $('logout').onclick=()=>{try{localStorage.removeItem('cplayer_login')}catch{};stopVideo();state.user='';state.pass='';state.server=null;$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('logout').classList.add('hidden');$('topStatus').textContent='Desconectado';$('password').value=''};
- // Login salvo no aparelho: entra automaticamente ao abrir.
+ // Login salvo no aparelho: entra automaticamente se já houver credenciais salvas; senão fica em branco.
  const SAVED=(()=>{try{return JSON.parse(localStorage.getItem('cplayer_login')||'null')}catch{return null}})();
- const DEF={u:'074922',p:'85xqEF'};const L=(SAVED&&SAVED.u)?SAVED:DEF;$('username').value=L.u;$('password').value=L.p||'';setTimeout(()=>$('loginForm').requestSubmit(),80);
+ if(SAVED&&SAVED.u){$('username').value=SAVED.u;$('password').value=SAVED.p||'';setTimeout(()=>$('loginForm').requestSubmit(),80)}
  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));loadView(b.dataset.view)});
  $('search').addEventListener('input',()=>{clearTimeout(state.searchTimer);state.searchTimer=setTimeout(()=>searchAll($('search').value.trim()),350)});
  $('moreBtn').onclick=()=>loadItems(true);
