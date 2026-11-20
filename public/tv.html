@@ -26,6 +26,11 @@ main{max-width:1450px;margin:auto;padding:22px}.login{max-width:440px;margin:7vh
 button:focus-visible,.item:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid #b8ff2e!important;outline-offset:3px!important;box-shadow:0 0 0 6px #b8ff2e33!important}
 .item{transition:transform .18s,border-color .18s,box-shadow .18s}.item:focus,.item:focus-visible{transform:scale(1.045);border-color:#b8ff2e;box-shadow:0 12px 35px #0009;z-index:2}
 .nav button{min-height:54px}
+/* O menu rola dentro da própria coluna, sem passar por baixo do cabeçalho. */
+@media(min-width:801px){
+.side{max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);overflow-y:auto;overscroll-behavior:contain;scroll-padding:14px;scrollbar-width:thin}
+.side .nav button{flex-shrink:0;scroll-margin-block:14px}
+}
 @media(max-width:800px){.poster{height:175px}}
 #playerBox.tvfs{position:fixed!important;inset:0;z-index:9999;margin:0;border:0;border-radius:0;background:#000;padding:0}
 #playerBox.tvfs>*:not(video):not(#tvOsd):not(#tvBar){display:none!important}
