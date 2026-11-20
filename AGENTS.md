@@ -29,4 +29,4 @@ use the editor.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
 
-- `public/tv.html` is the cPlayer TV app; `android-tv/` wraps it in a WebView APK loaded from local assets (file:// avoids the API CORS block).
+- `public/tv.html` is the TV app (single self-contained file); `android-tv/build.sh` packs it into a WebView APK from local assets (file:// avoids the API CORS block); `.github/workflows/android-tv.yml` builds the same APK on GitHub. Keep `android-tv/key.jks` so updates install over older versions.

@@ -1,0 +1,25 @@
+name: Build Android TV APK
+on:
+  push:
+    branches: [main]
+    paths: ["public/tv.html", "android-tv/**", ".github/workflows/android-tv.yml"]
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;34.0.0" "platforms;android-34" > /dev/null
+      - name: Build
+        working-directory: android-tv
+        env:
+          BT: ${{ env.ANDROID_HOME }}/build-tools/34.0.0
+          AJ: ${{ env.ANDROID_HOME }}/platforms/android-34/android.jar
+        run: |
+          export BT="$ANDROID_HOME/build-tools/34.0.0" AJ="$ANDROID_HOME/platforms/android-34/android.jar"
+          bash build.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: ProtectPowerTV-apk, path: android-tv/out/ProtectPowerTV.apk }
