@@ -172,7 +172,7 @@ button:focus,.chip:focus,input:focus{outline:3px solid #9bb7ff;outline-offset:3p
      const types=['live','movies','series'];const results=await Promise.all(paths.map(p=>api(p+'?'+new URLSearchParams({q,page:'0',limit:'30'})).catch(()=>({data:[]}))));
      const all=results.flatMap((r,i)=>(r.data||[]).map(x=>({...x,_type:types[i]})));
      $('viewTitle').textContent='Resultados da busca';$('viewSub').textContent=`${all.length} resultados`;
-     $('results').innerHTML=all.length?all.map((x,i)=>`<article class="item" tabindex="0" data-search="${i}"><div class="poster">${x.icon||x.cover?`<img src="${esc(imgUrl(x.icon||x.cover))}" referrerpolicy="no-referrer">`:'▶'}</div><div class="itembody"><div class="name">${esc(x.name||x.title||'Conteúdo')}</div><div class="sub">${esc(x._type)}</div></div></article>`).join(''):'<div class="empty">Nenhum resultado.</div>';
+     $('results').innerHTML=all.length?all.map((x,i)=>`<article class="item" tabindex="0" data-search="${i}"><div class="poster">${(x.icon||x.cover||x.poster||x.image)?`<img src="${esc(imgUrl(x.icon||x.cover||x.poster||x.image))}" referrerpolicy="no-referrer" onerror="this.remove()">`:'▶'}</div><div class="itembody"><div class="name">${esc(x.name||x.title||'Conteúdo')}</div><div class="sub">${esc(x._type)}</div></div></article>`).join(''):'<div class="empty">Nenhum resultado.</div>';
      $('results').querySelectorAll('[data-search]').forEach(el=>{const go=()=>selectItem(all[Number(el.dataset.search)]);el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
      $('categories').innerHTML='';$('moreWrap').classList.add('hidden');
    }catch(e){showNotice(e.message,'error')}
