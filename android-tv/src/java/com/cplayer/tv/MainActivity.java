@@ -22,7 +22,11 @@ public class MainActivity extends Activity {
     s.setAllowUniversalAccessFromFileURLs(true);
     s.setAllowFileAccessFromFileURLs(true);
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-    web.setWebViewClient(new WebViewClient());
+    s.setLoadsImagesAutomatically(true);
+    s.setBlockNetworkImage(false);
+    web.setWebViewClient(new WebViewClient() {
+      @Override public void onReceivedSslError(WebView v, android.webkit.SslErrorHandler h, android.net.http.SslError e) { h.proceed(); }
+    });
     web.setWebChromeClient(new WebChromeClient());
     web.setFocusable(true);
     web.setFocusableInTouchMode(true);
