@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
     setContentView(web);
     hideBars();
 
-    File cachedFile = new File(getFilesDir(), CACHED_FILE_NAME);
+    final File cachedFile = new File(getFilesDir(), CACHED_FILE_NAME);
     if (cachedFile.exists() && cachedFile.length() > 0) {
       web.loadUrl("file://" + cachedFile.getAbsolutePath());
     } else {
@@ -74,58 +74,80 @@ public class MainActivity extends Activity {
     }
   }
 
-  private void checkAndUpdateTvHtml(File cachedFile) {
-    new Thread(() -> {
-      HttpURLConnection conn = null;
-      try {
-        URL url = new URL(REMOTE_TV_URL);
-        conn = (HttpURLConnection) url.openConnection();
-        conn.setConnectTimeout(8000);
-        conn.setReadTimeout(12000);
-        conn.setUseCaches(false);
-        conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
-        conn.setRequestProperty("Pragma", "no-cache");
+  private void checkAndUpdateTvHtml(final File cachedFile) {
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        HttpURLConnection conn = null;
+        try {
+          URL url = new URL(REMOTE_TV_URL);
+          conn = (HttpURLConnection) url.openConnection();
+          conn.setConnectTimeout(8000);
+          conn.setReadTimeout(12000);
+          conn.setUseCaches(false);
+          conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
+          conn.setRequestProperty("Pragma", "no-cache");
 
-        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-          return;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        try (InputStream in = conn.getInputStream();
-             BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-          String line;
-          while ((line = br.readLine()) != null) {
-            sb.append(line).append('\n');
+          if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            return;
           }
-        }
 
-        String remoteHtml = sb.toString();
-        String lower = remoteHtml.toLowerCase();
-        if (!lower.contains("<html") && !lower.contains("<!doctype html")) {
-          return;
-        }
-
-        byte[] remoteBytes = remoteHtml.getBytes(StandardCharsets.UTF_8);
-        String remoteHash = sha256(remoteBytes);
-        String localHash = cachedFile.exists() ? sha256File(cachedFile) : "";
-
-        if (!remoteHash.equals(localHash)) {
-          try (FileOutputStream out = new FileOutputStream(cachedFile, false)) {
-            out.write(remoteBytes);
-            out.flush();
-          }
-          runOnUiThread(() -> {
-            if (web != null && !isFinishing()) {
-              web.loadUrl("file://" + cachedFile.getAbsolutePath());
-              web.requestFocus();
+          StringBuilder sb = new StringBuilder();
+          InputStream in = null;
+          BufferedReader br = null;
+          try {
+            in = conn.getInputStream();
+            br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+            String line;
+            while ((line = br.readLine()) != null) {
+              sb.append(line).append('\n');
             }
-          });
-        }
-      } catch (Exception ignored) {
-        // Sem internet ou falha no download: mantém a versão atual
-      } finally {
-        if (conn != null) {
-          conn.disconnect();
+          } finally {
+            if (br != null) {
+              try { br.close(); } catch (Exception ignored) {}
+            }
+            if (in != null) {
+              try { in.close(); } catch (Exception ignored) {}
+            }
+          }
+
+          String remoteHtml = sb.toString();
+          String lower = remoteHtml.toLowerCase();
+          if (!lower.contains("<html") && !lower.contains("<!doctype html")) {
+            return;
+          }
+
+          byte[] remoteBytes = remoteHtml.getBytes(StandardCharsets.UTF_8);
+          String remoteHash = sha256(remoteBytes);
+          String localHash = cachedFile.exists() ? sha256File(cachedFile) : "";
+
+          if (!remoteHash.equals(localHash)) {
+            FileOutputStream out = null;
+            try {
+              out = new FileOutputStream(cachedFile, false);
+              out.write(remoteBytes);
+              out.flush();
+            } finally {
+              if (out != null) {
+                try { out.close(); } catch (Exception ignored) {}
+              }
+            }
+            runOnUiThread(new Runnable() {
+              @Override
+              public void run() {
+                if (web != null && !isFinishing()) {
+                  web.loadUrl("file://" + cachedFile.getAbsolutePath());
+                  web.requestFocus();
+                }
+              }
+            });
+          }
+        } catch (Exception ignored) {
+          // Sem rede ou erro na consulta: mantém a versão atual
+        } finally {
+          if (conn != null) {
+            conn.disconnect();
+          }
         }
       }
     }).start();
@@ -142,7 +164,9 @@ public class MainActivity extends Activity {
   }
 
   private String sha256File(File file) {
-    try (InputStream in = new FileInputStream(file)) {
+    FileInputStream in = null;
+    try {
+      in = new FileInputStream(file);
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       byte[] buf = new byte[8192];
       int n;
@@ -157,6 +181,10 @@ public class MainActivity extends Activity {
       return hex.toString();
     } catch (Exception e) {
       return "";
+    } finally {
+      if (in != null) {
+        try { in.close(); } catch (Exception ignored) {}
+      }
     }
   }
 
